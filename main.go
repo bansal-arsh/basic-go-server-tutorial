@@ -9,14 +9,14 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleRoot)
+	mux.HandleFunc("/{$}", handleRoot)
 	mux.HandleFunc("/goodbye", handleGoodbye)
 	mux.HandleFunc("/hello", handleHelloParametrized)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
 func handleRoot(w http.ResponseWriter, _ *http.Request) {
-	_, err := w.Write([]byte("Hello, World!\n"))
+	_, err := w.Write([]byte("Welcome to the Homepage!\n"))
 	if err != nil {
 		slog.Error("Error writing response", "err", err)
 		return
