@@ -7,19 +7,15 @@ import (
 	"testing"
 )
 
-func TestHandleHello(t *testing.T) {
+func TestHandleRoot(t *testing.T) {
 	w := httptest.NewRecorder()
-	handleHello(w, nil)
+	handleRoot(w, nil)
 
 	expectedStatusCode := http.StatusOK
-	if w.Code != expectedStatusCode {
-		t.Errorf("Bad response code! Expected %v but received %v.\nBody: %s\n", expectedStatusCode, w.Code, w.Body)
-	}
+	validateCode(expectedStatusCode, w, t)
 
 	expectedBody := []byte("Hello, World!\n")
-	if !bytes.Equal(w.Body.Bytes(), expectedBody) {
-		t.Errorf("Bad response! Expected %q but received %q", expectedBody, w.Body.String())
-	}
+	validateBody(expectedBody, w, t)
 }
 
 func TestHandleGoodbye(t *testing.T) {
@@ -27,11 +23,46 @@ func TestHandleGoodbye(t *testing.T) {
 	handleGoodbye(w, nil)
 
 	expectedStatusCode := http.StatusOK
+	validateCode(expectedStatusCode, w, t)
+
+	expectedBody := []byte("Goodbye!\n")
+	validateBody(expectedBody, w, t)
+}
+
+func TestHandleHelloParametrizedNormal(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/hello?user=TestMan", nil)
+	handleHelloParametrized(w, r)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, TestMan!\n"), w, t)
+}
+
+func TestHandleHelloParametrizedNoParam(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/hello", nil)
+	handleHelloParametrized(w, r)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, User!\n"), w, t)
+}
+
+func TestHandleHelloParametrizedWrongParam(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/hello?foo=bar", nil)
+	handleHelloParametrized(w, r)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, User!\n"), w, t)
+}
+
+func validateCode(expectedStatusCode int, w *httptest.ResponseRecorder, t *testing.T) {
 	if w.Code != expectedStatusCode {
 		t.Errorf("Bad response code! Expected %v but received %v.\nBody: %s\n", expectedStatusCode, w.Code, w.Body)
 	}
+}
 
-	expectedBody := []byte("Goodbye!\n")
+func validateBody(expectedBody []byte, w *httptest.ResponseRecorder, t *testing.T) {
 	if !bytes.Equal(w.Body.Bytes(), expectedBody) {
 		t.Errorf("Bad response! Expected %q but received %q", expectedBody, w.Body.String())
 	}
