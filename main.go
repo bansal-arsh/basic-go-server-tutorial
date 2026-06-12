@@ -9,9 +9,11 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
+
 	mux.HandleFunc("/{$}", handleRoot)
 	mux.HandleFunc("/goodbye", handleGoodbye)
 	mux.HandleFunc("/hello", handleHelloParametrized)
+
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
