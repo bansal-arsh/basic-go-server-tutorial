@@ -68,6 +68,29 @@ func TestHandleHelloVarUrl(t *testing.T) {
 	validateBody([]byte("Hello, TestMan!\n"), w, t)
 }
 
+func TestHandleHelloHeaderNormal(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/user/hello", nil)
+	req.Header.Add("user", "Test Man")
+
+	w := httptest.NewRecorder()
+
+	handleHelloHeader(w, req)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, Test Man!\n"), w, t)
+}
+
+func TestHandleHelloHeaderNoHeader(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/user/hello", nil)
+
+	w := httptest.NewRecorder()
+
+	handleHelloHeader(w, req)
+
+	validateCode(http.StatusBadRequest, w, t)
+	validateBody([]byte("Invalid username\n"), w, t)
+}
+
 func validateCode(expectedStatusCode int, w *httptest.ResponseRecorder, t *testing.T) {
 	if w.Code != expectedStatusCode {
 		t.Errorf("Bad response code! Expected %v but received %v.\nBody: %s\n", expectedStatusCode, w.Code, w.Body)

@@ -13,6 +13,7 @@ func main() {
 	mux.HandleFunc("/goodbye", handleGoodbye)
 	mux.HandleFunc("/hello", handleHelloParametrized)
 	mux.HandleFunc("/responses/{user}/hello", handleHelloVarUrl)
+	mux.HandleFunc("/user/hello", handleHelloHeader)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
@@ -53,6 +54,20 @@ func handleHelloParametrized(w http.ResponseWriter, r *http.Request) {
 
 func handleHelloVarUrl(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("user")
+	response := "Hello, " + username + "!\n"
+	_, err := w.Write([]byte(response))
+	if err != nil {
+		slog.Error("Error writing response", "err", err)
+	}
+}
+
+func handleHelloHeader(w http.ResponseWriter, r *http.Request) {
+	username := r.Header.Get("user")
+	if username == "" {
+		http.Error(w, "Invalid username", http.StatusBadRequest)
+		return
+	}
+
 	response := "Hello, " + username + "!\n"
 	_, err := w.Write([]byte(response))
 	if err != nil {
