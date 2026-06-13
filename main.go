@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,7 @@ func main() {
 	mux.HandleFunc("/{$}", handleRoot)
 	mux.HandleFunc("/goodbye", handleGoodbye)
 	mux.HandleFunc("/hello", handleHelloParametrized)
+	mux.HandleFunc("/responses/{user}/hello", handleHelloVarUrl)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
@@ -43,14 +43,19 @@ func handleHelloParametrized(w http.ResponseWriter, r *http.Request) {
 		username = "User"
 	}
 
-	var output bytes.Buffer
-	output.WriteString("Hello, ")
-	output.WriteString(username)
-	output.WriteString("!\n")
-
-	_, err := w.Write(output.Bytes())
+	response := "Hello, " + username + "!\n"
+	_, err := w.Write([]byte(response))
 	if err != nil {
 		slog.Error("Error writing response", "err", err)
 		return
+	}
+}
+
+func handleHelloVarUrl(w http.ResponseWriter, r *http.Request) {
+	username := r.PathValue("user")
+	response := "Hello, " + username + "!\n"
+	_, err := w.Write([]byte(response))
+	if err != nil {
+		slog.Error("Error writing response", "err", err)
 	}
 }

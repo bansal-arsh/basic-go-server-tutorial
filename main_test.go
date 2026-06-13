@@ -14,7 +14,7 @@ func TestHandleRoot(t *testing.T) {
 	expectedStatusCode := http.StatusOK
 	validateCode(expectedStatusCode, w, t)
 
-	expectedBody := []byte("Hello, World!\n")
+	expectedBody := []byte("Welcome to the Homepage!\n")
 	validateBody(expectedBody, w, t)
 }
 
@@ -54,6 +54,18 @@ func TestHandleHelloParametrizedWrongParam(t *testing.T) {
 
 	validateCode(http.StatusOK, w, t)
 	validateBody([]byte("Hello, User!\n"), w, t)
+}
+
+func TestHandleHelloVarUrl(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/responses/TestMan/hello", nil)
+	req.SetPathValue("user", "TestMan")
+
+	w := httptest.NewRecorder()
+
+	handleHelloVarUrl(w, req)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, TestMan!\n"), w, t)
 }
 
 func validateCode(expectedStatusCode int, w *httptest.ResponseRecorder, t *testing.T) {
