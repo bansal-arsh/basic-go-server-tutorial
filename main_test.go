@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -86,6 +87,45 @@ func TestHandleHelloHeaderNoHeader(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handleHelloHeader(w, req)
+
+	validateCode(http.StatusBadRequest, w, t)
+	validateBody([]byte("Invalid username\n"), w, t)
+}
+
+func TestHandleHelloJSON(t *testing.T) {
+	requestStruct := UserData{Name: "Test Man"}
+	requestData, err := json.Marshal(requestStruct)
+	if err != nil {
+		t.Fatalf("Error marshalling test struct: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodPost, "/json", bytes.NewBuffer(requestData))
+	w := httptest.NewRecorder()
+	handleHelloJSON(w, r)
+
+	validateCode(http.StatusOK, w, t)
+	validateBody([]byte("Hello, Test Man!\n"), w, t)
+}
+
+func TestHandleHelloJSONEmptyBody(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/json", nil)
+	w := httptest.NewRecorder()
+	handleHelloJSON(w, r)
+
+	validateCode(http.StatusBadRequest, w, t)
+	validateBody([]byte("Error reading JSON\n"), w, t)
+}
+
+func TestHandleHelloJSONEmptyName(t *testing.T) {
+	requestStruct := UserData{Name: ""}
+	requestData, err := json.Marshal(requestStruct)
+	if err != nil {
+		t.Fatalf("Error marshalling test struct: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodPost, "/json", bytes.NewBuffer(requestData))
+	w := httptest.NewRecorder()
+	handleHelloJSON(w, r)
 
 	validateCode(http.StatusBadRequest, w, t)
 	validateBody([]byte("Invalid username\n"), w, t)
