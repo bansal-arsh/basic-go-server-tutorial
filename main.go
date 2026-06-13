@@ -20,6 +20,7 @@ func main() {
 	mux.HandleFunc("/hello", handleHelloParametrized)
 	mux.HandleFunc("/responses/{user}/hello", handleHelloVarUrl)
 	mux.HandleFunc("/user/hello", handleHelloHeader)
+	mux.HandleFunc("/json", handleHelloJSON)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
