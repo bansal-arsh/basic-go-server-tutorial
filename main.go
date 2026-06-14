@@ -29,7 +29,7 @@ func main() {
 	mux.HandleFunc("/goodbye/", handleGoodbye)
 	mux.HandleFunc("/hello/", handleHelloParametrized)
 	mux.HandleFunc("/responses/{user}/hello/", handleHelloVarUrl)
-	mux.HandleFunc("/user/hello/", handleHelloHeader)
+	mux.HandleFunc("/user/hello/", server.handleHelloHeader)
 	mux.HandleFunc("POST /json", handleHelloJSON)
 	mux.HandleFunc("POST /add-user", server.addUser)
 	mux.HandleFunc("POST /get-user", server.getUser)
@@ -71,16 +71,6 @@ func handleHelloVarUrl(w http.ResponseWriter, r *http.Request) {
 	handleHello(w, username)
 }
 
-func handleHelloHeader(w http.ResponseWriter, r *http.Request) {
-	username := r.Header.Get("user")
-	if username == "" {
-		http.Error(w, "Invalid username", http.StatusBadRequest)
-		return
-	}
-
-	handleHello(w, username)
-}
-
 func handleHelloJSON(w http.ResponseWriter, r *http.Request) {
 	jsonBytes, err := io.ReadAll(r.Body)
 	if err != nil || len(jsonBytes) < 1 {
@@ -111,6 +101,35 @@ func handleHello(w http.ResponseWriter, username string) {
 	if err != nil {
 		slog.Error("Error writing response", "err", err)
 	}
+}
+
+func (s *serverType) handleHelloHeader(w http.ResponseWriter, r *http.Request) {
+	firstName := r.Header.Get("userFirst")
+	if firstName == "" {
+		http.Error(w, "Invalid first name", http.StatusBadRequest)
+		return
+	}
+
+	lastName := r.Header.Get("userLast")
+	if lastName == "" {
+		http.Error(w, "Invalid last name", http.StatusBadRequest)
+		return
+	}
+
+	user, err := s.manager.GetUserByName(firstName, lastName)
+	if err != nil {
+		if errors.Is(err, users.ErrNoResultsFound) {
+			http.Error(w, "No users found", http.StatusNotFound)
+		} else {
+			slog.Error("Error retreiving user", "err", err)
+			http.Error(w, "Error retreiving user", http.StatusBadRequest)
+		}
+		return
+	}
+
+	userData := convertUserToUserData(user)
+	response := fmt.Sprintf("Hello, %s %s!\nYour email is: %s\n", firstName, lastName, userData.Email)
+	w.Write([]byte(response))
 }
 
 func (s *serverType) addUser(w http.ResponseWriter, r *http.Request) {

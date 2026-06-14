@@ -74,26 +74,62 @@ func TestHandleHelloVarUrl(t *testing.T) {
 }
 
 func TestHandleHelloHeader_Normal(t *testing.T) {
+	testManager := users.NewManager()
+	testManager.AddUser("foo", "bar", "f.bar@example.com")
+	testManager.AddUser("bar", "baz", "b.baz@example.com")
+	testManager.AddUser("foo", "baz", "f.baz@example.com")
+	testManager.AddUser("baz", "foo", "b.foo@example.com")
+
+	testServer := serverType{manager: testManager}
+
 	req := httptest.NewRequest(http.MethodGet, "/user/hello", nil)
-	req.Header.Add("user", "Test Man")
+	req.Header.Add("userFirst", "foo")
+	req.Header.Add("userLast", "baz")
 
 	w := httptest.NewRecorder()
 
-	handleHelloHeader(w, req)
+	testServer.handleHelloHeader(w, req)
 
 	validateCode(http.StatusOK, w, t)
-	validateBody([]byte("Hello, Test Man!\n"), w, t)
+	validateBody([]byte("Hello, foo baz!\nYour email is: f.baz@example.com\n"), w, t)
 }
 
-func TestHandleHelloHeader_NoHeader(t *testing.T) {
+func TestHandleHelloHeader_NoFirstHeader(t *testing.T) {
+	testManager := users.NewManager()
+	testManager.AddUser("foo", "bar", "f.bar@example.com")
+	testManager.AddUser("bar", "baz", "b.baz@example.com")
+	testManager.AddUser("foo", "baz", "f.baz@example.com")
+	testManager.AddUser("baz", "foo", "b.foo@example.com")
+
+	testServer := serverType{manager: testManager}
+
 	req := httptest.NewRequest(http.MethodGet, "/user/hello", nil)
+	req.Header.Add("userLast", "baz")
 
 	w := httptest.NewRecorder()
-
-	handleHelloHeader(w, req)
+	testServer.handleHelloHeader(w, req)
 
 	validateCode(http.StatusBadRequest, w, t)
-	validateBody([]byte("Invalid username\n"), w, t)
+	validateBody([]byte("Invalid first name\n"), w, t)
+}
+
+func TestHandleHelloHeader_NoLastHeader(t *testing.T) {
+	testManager := users.NewManager()
+	testManager.AddUser("foo", "bar", "f.bar@example.com")
+	testManager.AddUser("bar", "baz", "b.baz@example.com")
+	testManager.AddUser("foo", "baz", "f.baz@example.com")
+	testManager.AddUser("baz", "foo", "b.foo@example.com")
+
+	testServer := serverType{manager: testManager}
+
+	req := httptest.NewRequest(http.MethodGet, "/user/hello", nil)
+	req.Header.Add("userFirst", "foo")
+
+	w := httptest.NewRecorder()
+	testServer.handleHelloHeader(w, req)
+
+	validateCode(http.StatusBadRequest, w, t)
+	validateBody([]byte("Invalid last name\n"), w, t)
 }
 
 func TestHandleHelloJSON_Normal(t *testing.T) {
