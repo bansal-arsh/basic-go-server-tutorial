@@ -3,7 +3,9 @@ package users
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/mail"
+	"time"
 )
 
 var ErrNoResultsFound = errors.New("No results found")
@@ -56,4 +58,10 @@ func (m *Manager) GetUserByName(firstName, lastName string) (*User, error) {
 	}
 
 	return nil, ErrNoResultsFound
+}
+
+func (m *Manager) Shutdown() {
+	slog.Info("Manager shutting down")
+	time.Sleep(2 * time.Second)
+	slog.Info("Manager shutdown complete")
 }

@@ -1,14 +1,19 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"starter-projects/basic-go-server/internal/users"
+	"sync"
+	"syscall"
+	"time"
 )
 
 type UserData struct {
@@ -22,8 +27,16 @@ type serverType struct {
 }
 
 func main() {
-	server := serverType{manager: users.NewManager()}
+	slog.Info("Starting server...")
+	manager := users.NewManager()
+	defer manager.Shutdown()
+
+	server := serverType{manager: manager}
 	mux := http.NewServeMux()
+	httpServer := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
 
 	mux.HandleFunc("/{$}", handleRoot)
 	mux.HandleFunc("/goodbye/", handleGoodbye)
@@ -34,7 +47,37 @@ func main() {
 	mux.HandleFunc("POST /add-user", server.addUser)
 	mux.HandleFunc("POST /get-user", server.getUser)
 
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	go func() {
+		slog.Info("Server started")
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("Closing server due to error")
+			os.Exit(1)
+		}
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		shutdownCh := make(chan os.Signal)
+		signal.Notify(shutdownCh, syscall.SIGTERM, syscall.SIGINT)
+
+		<-shutdownCh
+
+		slog.Info("Shutting down server...")
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+
+		err := httpServer.Shutdown(shutdownCtx)
+		if err != nil {
+			slog.Error("Error while shutting down", "err", err)
+		}
+	}()
+
+	wg.Wait()
+	slog.Info("Server shutdown complete")
 }
 
 func handleRoot(w http.ResponseWriter, _ *http.Request) {
