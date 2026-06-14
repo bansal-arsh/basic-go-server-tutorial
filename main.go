@@ -2,25 +2,37 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
+	"starter-projects/basic-go-server/internal/users"
 )
 
 type UserData struct {
-	Name string
+	FirstName string
+	LastName  string
+	Email     string
+}
+
+type serverType struct {
+	manager *users.Manager
 }
 
 func main() {
+	server := serverType{manager: users.NewManager()}
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/{$}", handleRoot)
-	mux.HandleFunc("/goodbye", handleGoodbye)
-	mux.HandleFunc("/hello", handleHelloParametrized)
-	mux.HandleFunc("/responses/{user}/hello", handleHelloVarUrl)
-	mux.HandleFunc("/user/hello", handleHelloHeader)
-	mux.HandleFunc("/json", handleHelloJSON)
+	mux.HandleFunc("/goodbye/", handleGoodbye)
+	mux.HandleFunc("/hello/", handleHelloParametrized)
+	mux.HandleFunc("/responses/{user}/hello/", handleHelloVarUrl)
+	mux.HandleFunc("/user/hello/", handleHelloHeader)
+	mux.HandleFunc("POST /json", handleHelloJSON)
+	mux.HandleFunc("POST /add-user", server.addUser)
+	mux.HandleFunc("POST /get-user", server.getUser)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
@@ -85,12 +97,12 @@ func handleHelloJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if requestUserData.Name == "" {
+	if requestUserData.FirstName == "" {
 		http.Error(w, "Invalid username", http.StatusBadRequest)
 		return
 	}
 
-	handleHello(w, requestUserData.Name)
+	handleHello(w, requestUserData.FirstName)
 }
 
 func handleHello(w http.ResponseWriter, username string) {
@@ -98,5 +110,81 @@ func handleHello(w http.ResponseWriter, username string) {
 	_, err := w.Write([]byte(response))
 	if err != nil {
 		slog.Error("Error writing response", "err", err)
+	}
+}
+
+func (s *serverType) addUser(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		errMsg := fmt.Sprintf("Unsupported Content-Type header: %q", contentType)
+		http.Error(w, errMsg, http.StatusUnsupportedMediaType)
+		return
+	}
+
+	jsonDecoder := json.NewDecoder(r.Body)
+	jsonDecoder.DisallowUnknownFields()
+	var newUserData UserData
+	err := jsonDecoder.Decode(&newUserData)
+	if err != nil {
+		slog.Error("Error unmarshalling user data", "err", err)
+		http.Error(w, "Bad request body", http.StatusBadRequest)
+		return
+	}
+
+	err = s.manager.AddUser(newUserData.FirstName, newUserData.LastName, newUserData.Email)
+	if err != nil {
+		slog.Error("Error while adding user", "err", err)
+		http.Error(w, "Error adding user", http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (s *serverType) getUser(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "application/json" {
+		errMsg := fmt.Sprintf("Unsupported Content-Type header: %q", contentType)
+		http.Error(w, errMsg, http.StatusUnsupportedMediaType)
+		return
+	}
+
+	jsonDecoder := json.NewDecoder(r.Body)
+	jsonDecoder.DisallowUnknownFields()
+	var requestUserName struct{ FirstName, LastName string }
+	err := jsonDecoder.Decode(&requestUserName)
+	if err != nil {
+		slog.Error("Error unmarshalling request body", "err", err)
+		http.Error(w, "Bad request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := s.manager.GetUserByName(requestUserName.FirstName, requestUserName.LastName)
+	if err != nil {
+		if errors.Is(err, users.ErrNoResultsFound) {
+			http.Error(w, "No users found", http.StatusNotFound)
+		} else {
+			slog.Error("Error retreiving user", "err", err)
+			http.Error(w, "Error retreiving user", http.StatusBadRequest)
+		}
+		return
+	}
+
+	userData := convertUserToUserData(user)
+	responseBytes, err := json.Marshal(userData)
+	if err != nil {
+		slog.Error("Error marshalling response user data", "err", err)
+		http.Error(w, "Error while sending data", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(responseBytes)
+}
+
+func convertUserToUserData(u *users.User) *UserData {
+	return &UserData{
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Email:     u.Email.Address,
 	}
 }
