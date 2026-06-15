@@ -10,10 +10,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"starter-projects/basic-go-server/internal/users"
 	"sync"
 	"syscall"
 	"time"
+
+	"starter-projects/basic-go-server/internal/users"
 )
 
 type UserData struct {
