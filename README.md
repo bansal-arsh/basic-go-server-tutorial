@@ -7,3 +7,5 @@ This is a basic HTTP API server written entirely in Go. It also simulates a data
 - Request payload (for JSON queries and POST requests)
 
 Huge thanks to **Mongoose Studios** for their [YouTube tutorial](https://www.youtube.com/watch?v=lyh9G3-Q7PQ&list=PLlv5lnjOHQo7m2w-KjtTZq10ZNVfNHHdP&index=1) on setting up a Go HTTP Server. This server was made following their tutorial.
+
+This repository serves both as a tutorial and a reference guide for me in the future.
