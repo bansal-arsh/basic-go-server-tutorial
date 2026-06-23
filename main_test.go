@@ -8,8 +8,9 @@ import (
 	"net/http/httptest"
 	"net/mail"
 	"reflect"
-	"starter-projects/basic-go-server/internal/users"
 	"testing"
+
+	"starter-projects/basic-go-server/internal/users"
 )
 
 func TestHandleRoot(t *testing.T) {
